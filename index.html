@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sip</title>
+    <title>startpage</title>
     <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -121,7 +121,7 @@
                                 <i class="fa-solid fa-user"></i>
                                 <span>Your Name</span>
                             </div>
-                            <input type="text" id="setting-name" class="setting-input" placeholder="Enter name (optional)" maxlength="25">
+                            <input type="text" id="setting-name" class="setting-input" placeholder="Enter your name (optional)" maxlength="20">
                         </div>
                         
                         <div class="setting-item">
@@ -181,15 +181,6 @@
                         
                         <div class="setting-item setting-item-vertical">
                             <div class="setting-label">
-                                <i class="fa-solid fa-cloud-sun"></i>
-                                <span>Weather Data</span>
-                            </div>
-                            <p class="setting-description">Enter your <a href="https://openweathermap.org/api" target="_blank">OpenWeatherMap</a> API key for live weather.  Leave empty to use mock data.</p>
-                            <input type="text" id="setting-weather-api-key" class="setting-input" placeholder="Enter OpenWeatherMap API key" autocomplete="off">
-                        </div>
-                        
-                        <div class="setting-item setting-item-vertical">
-                            <div class="setting-label">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                                 <span>Search Engines</span>
                             </div>
@@ -235,7 +226,7 @@
                     
                     <!-- Categories Tab -->
                     <div class="settings-panel" data-panel="categories">
-                        <p class="panel-description">Add up to 8 categories.  You can use emoji or text for icons.</p>
+                        <p class="panel-description">Add up to 8 categories. You can use emoji or text for icons.</p>
                         <div class="categories-list" id="categories-list">
                             <!-- Categories will be populated dynamically -->
                         </div>
@@ -297,7 +288,7 @@
         <footer class="footer">
             <div class="widget weather-widget">
                 <span class="widget-icon"><i class="fa-solid fa-cloud-sun"></i></span>
-                <span class="widget-text" id="weather">Loading... </span>
+                <span class="widget-text" id="weather">Loading...</span>
             </div>
             <div class="widget quote-widget">
                 <span class="widget-icon"><i class="fa-solid fa-quote-left"></i></span>
