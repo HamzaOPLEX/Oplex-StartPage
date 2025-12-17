@@ -1259,6 +1259,30 @@ function initEventListeners() {
     }
     
     document.addEventListener('keydown', handleKeyboard);
+    
+    // Backup & Restore buttons
+    const backupBtn = document.getElementById('backup-button');
+    const restoreBtn = document.getElementById('restore-button');
+    const restoreFileInput = document.getElementById('restore-file-input');
+    
+    if (backupBtn) {
+        backupBtn.addEventListener('click', exportSettings);
+    }
+    
+    if (restoreBtn && restoreFileInput) {
+        restoreBtn.addEventListener('click', () => {
+            restoreFileInput.click();
+        });
+        
+        restoreFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                importSettings(file);
+                // Reset input so same file can be selected again
+                e.target.value = '';
+            }
+        });
+    }
 }
 
 // ========================================
@@ -1346,6 +1370,131 @@ function init() {
     setTimeout(() => {
         if (searchInput) searchInput.focus();
     }, 700);
+}
+
+// ========================================
+// Backup & Restore Functions
+// ========================================
+
+function exportSettings() {
+    // Gather all data
+    const exportData = {
+        version: '1.1.0',
+        exportDate: new Date().toISOString(),
+        settings: {
+            userName: localStorage.getItem('userName'),
+            colorScheme: localStorage.getItem('colorScheme'),
+            theme: localStorage.getItem('theme'),
+            colorMode: localStorage.getItem('colorMode'),
+            timeFormat: localStorage.getItem('timeFormat'),
+            showSeconds: localStorage.getItem('showSeconds'),
+            tempUnit: localStorage.getItem('tempUnit'),
+            showQuotes: localStorage.getItem('showQuotes'),
+            enabledEngines: localStorage.getItem('enabledEngines'),
+            preferredEngine: localStorage.getItem('preferredEngine'),
+            weatherLocation: localStorage.getItem('weatherLocation'),
+            openWeatherApiKey: localStorage.getItem('openWeatherApiKey'),
+            linkBehavior: localStorage.getItem('linkBehavior'),
+            showKeyboardHints: localStorage.getItem('showKeyboardHints'),
+            footerLeft: localStorage.getItem('footerLeft'),
+            footerCenter: localStorage.getItem('footerCenter'),
+            footerRight: localStorage.getItem('footerRight'),
+            socialLinks: localStorage.getItem('socialLinks')
+        },
+        categories: localStorage.getItem('categories'),
+        links: localStorage.getItem('links')
+    };
+    
+    // Create and download file
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `sip-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    // Show confirmation
+    showNotification('Settings exported successfully!', 'success');
+}
+
+function importSettings(file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const importData = JSON.parse(e.target.result);
+            
+            // Validate data structure
+            if (!importData.version || !importData.settings) {
+                throw new Error('Invalid backup file format');
+            }
+            
+            // Confirm before overwriting
+            if (!confirm('This will replace all your current settings, categories, and links. Continue?')) {
+                return;
+            }
+            
+            // Import settings
+            Object.entries(importData.settings).forEach(([key, value]) => {
+                if (value !== null && value !== undefined) {
+                    localStorage.setItem(key, value);
+                }
+            });
+            
+            // Import categories and links
+            if (importData.categories) {
+                localStorage.setItem('categories', importData.categories);
+            }
+            if (importData.links) {
+                localStorage.setItem('links', importData.links);
+            }
+            
+            // Show success message and reload
+            showNotification('Settings imported successfully! Reloading...', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+            
+        } catch (error) {
+            showNotification('Error importing settings: ' + error.message, 'error');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: var(--surface0);
+        border: 1px solid var(--${type === 'success' ? 'green' : type === 'error' ? 'red' : 'primary'});
+        border-radius: var(--radius-md);
+        color: var(--text);
+        box-shadow: var(--shadow-lg);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
 }
 
 // ========================================

@@ -1294,6 +1294,46 @@ body {
     color: var(--primary);
 }
 
+/* Backup & Restore */
+.setting-description {
+    font-size: 0.8rem;
+    color: var(--subtext0);
+    margin-top: var(--spacing-xs);
+    line-height: 1.4;
+}
+
+.backup-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.backup-btn {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--surface0);
+    color: var(--text);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    transition: all var(--transition-fast);
+}
+
+.backup-btn:hover {
+    background: var(--surface1);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.backup-btn i {
+    font-size: 1rem;
+}
+
 /* Category & Link Management */
 .categories-list,
 .links-list {
@@ -2181,6 +2221,28 @@ kbd {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
     }
 }
 

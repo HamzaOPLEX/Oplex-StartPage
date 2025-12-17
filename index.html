@@ -240,6 +240,23 @@
                                 </label>
                             </div>
                         </div>
+                        
+                        <div class="setting-item setting-item-vertical">
+                            <div class="setting-label">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Backup & Restore</span>
+                            </div>
+                            <p class="setting-description">Export or import all your settings, categories, and links.</p>
+                            <div class="backup-buttons">
+                                <button id="backup-button" class="backup-btn">
+                                    <i class="fa-solid fa-file-export"></i> Export Settings
+                                </button>
+                                <button id="restore-button" class="backup-btn">
+                                    <i class="fa-solid fa-file-import"></i> Import Settings
+                                </button>
+                                <input type="file" id="restore-file-input" accept=".json" style="display: none;">
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Categories Tab -->
