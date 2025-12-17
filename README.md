@@ -109,6 +109,7 @@ Sip now includes 9 beautiful color schemes, each with both light and dark varian
 </details>
 
 ### ⚙️ **Enhanced Settings & Customization**
+- **Backup & Restore** - Export and import all your settings, categories, and links (v1.1.1)
 - **Click Time to Toggle** - Click the clock to quickly switch between 12h/24h format
 - **Show Seconds Option** - Display seconds on the clock for precise timekeeping
 - **Link Behavior Control** - Choose to open links in same window, new tab, or new window
@@ -175,6 +176,7 @@ Sip now includes 9 beautiful color schemes, each with both light and dark varian
 - Toggle between Fahrenheit and Celsius
 - **Social links integration** with 10 popular platforms
 - **Customizable footer layout** (left/center/right sections)
+- **Backup & Restore** - Easily migrate settings between browsers
 
 **Productivity**
 - Organize your favorite sites in customizable categories
