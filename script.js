@@ -31,7 +31,7 @@ const defaultLinks = {
         { name: 'Docker', url: 'https://docker.com', icon: 'fa-brands fa-docker' }
     ],
     'productivity': [
-        { name: 'Todo List', url: 'https://to-do.office.com/tasks/', icon: 'fa-solid fa-list-check' },
+        { name: 'MS Todo List', url: 'https://to-do.office.com/tasks/', icon: 'fa-solid fa-list-check' },
         { name: 'Traduction', url: 'https://translate.google.com/', icon: 'fa-solid fa-language' },
         { name: 'ChatGPT', url: 'https://chatgpt.com/', icon: 'fa-solid fa-robot' },
         { name: 'Notion', url: 'https://www.notion.so', icon: 'fa-solid fa-note-sticky' },
@@ -148,7 +148,9 @@ function loadSettings() {
         footerLeft: 'weather',
         footerCenter: 'blank',
         footerRight: 'quotes',
-        socialLinks: []
+        socialLinks: [],
+        density: 'cozy',
+        collapsedCategories: {}
     };
     
     return {
@@ -169,7 +171,9 @@ function loadSettings() {
         footerLeft: localStorage.getItem('footerLeft') ?? defaults.footerLeft,
         footerCenter: localStorage.getItem('footerCenter') ?? defaults.footerCenter,
         footerRight: localStorage.getItem('footerRight') ?? defaults.footerRight,
-        socialLinks: JSON.parse(localStorage.getItem('socialLinks')) ?? defaults.socialLinks
+        socialLinks: JSON.parse(localStorage.getItem('socialLinks')) ?? defaults.socialLinks,
+        density: localStorage.getItem('density') ?? defaults.density,
+        collapsedCategories: JSON.parse(localStorage.getItem('collapsedCategories')) ?? defaults.collapsedCategories
     };
 }
 
@@ -213,10 +217,48 @@ function saveLinks(lnks) {
     localStorage.setItem('links', JSON. stringify(lnks));
 }
 
+function ensureCollapsedState() {
+    if (!settings.collapsedCategories) {
+        settings.collapsedCategories = {};
+    }
+    
+    let updated = false;
+    categories.forEach(cat => {
+        if (!(cat.id in settings.collapsedCategories)) {
+            settings.collapsedCategories[cat.id] = 'true';
+            updated = true;
+        }
+    });
+    
+    if (updated) {
+        saveSettings('collapsedCategories', settings.collapsedCategories);
+    }
+}
+
+function ensurePinnedFlag() {
+    let updated = false;
+    Object.keys(links).forEach(catId => {
+        links[catId].forEach(link => {
+            if (typeof link.pinned === 'undefined') {
+                link.pinned = false;
+                updated = true;
+            }
+            if (typeof link.pinnedPriority === 'undefined') {
+                link.pinnedPriority = 0;
+                updated = true;
+            }
+        });
+    });
+    if (updated) {
+        saveLinks(links);
+    }
+}
+
 // Initialize settings
 let settings = loadSettings();
 let categories = loadCategories();
 let links = loadLinks();
+ensurePinnedFlag();
 let currentEngine = settings.preferredEngine;
 
 // ========================================
@@ -226,6 +268,11 @@ let currentEngine = settings.preferredEngine;
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     saveSettings('theme', theme);
+}
+
+function applyDensity(density) {
+    document.documentElement.setAttribute('data-density', density);
+    saveSettings('density', density);
 }
 
 function applyColorScheme(scheme) {
@@ -256,12 +303,13 @@ function applyColorMode(mode) {
 // Apply saved theme and color scheme immediately
 applyTheme(settings.theme);
 applyColorScheme(settings.colorScheme);
+applyDensity(settings.density);
 
 // ========================================
 // DOM Elements
 // ========================================
 
-let searchInput, timeElement, dateElement, greetingElement, weatherElement, quoteElement, linksGrid;
+let searchInput, timeElement, dateElement, greetingElement, weatherElement, quoteElement, linksGrid, searchSuggestionsContainer;
 
 // ========================================
 // Time & Date Functions
@@ -333,6 +381,15 @@ function updateGreeting(hour) {
 // Search Functions
 // ========================================
 
+function openLinkWithBehavior(url) {
+    if (!url) return;
+    if (settings.linkBehavior === 'new-tab' || settings.linkBehavior === 'new-window') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+        window.location.href = url;
+    }
+}
+
 function performSearch(query) {
     if (!query.trim()) return;
     
@@ -368,6 +425,112 @@ function setSearchEngine(engine) {
     }
 }
 
+function getAllLinkEntries() {
+    const entries = [];
+    categories.forEach(category => {
+        const catLinks = links[category.id] || [];
+        catLinks.forEach(link => {
+            entries.push({
+                category: category.name || category.id,
+                name: link.name || '',
+                url: link.url || '',
+                icon: link.icon || 'fa-solid fa-link'
+            });
+        });
+    });
+    return entries;
+}
+
+function getPinnedLinks() {
+    const pinned = [];
+    categories.forEach(category => {
+        const catLinks = links[category.id] || [];
+        catLinks.forEach((link, idx) => {
+            if (link.pinned) {
+                pinned.push({
+                    categoryId: category.id,
+                    categoryName: category.name || category.id,
+                    name: link.name || '',
+                    url: link.url || '',
+                    icon: link.icon || 'fa-solid fa-link',
+                    priority: typeof link.pinnedPriority === 'number' ? link.pinnedPriority : 0,
+                    index: idx
+                });
+            }
+        });
+    });
+    return pinned.sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        return a.name.localeCompare(b.name);
+    });
+}
+
+function hideSearchSuggestions() {
+    if (searchSuggestionsContainer) {
+        searchSuggestionsContainer.classList.remove('active');
+        searchSuggestionsContainer.innerHTML = '';
+    }
+}
+
+function renderSearchSuggestions(query) {
+    if (!searchSuggestionsContainer) return;
+    
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+        hideSearchSuggestions();
+        return;
+    }
+    
+    const matches = getAllLinkEntries()
+        .filter(item => item.name.toLowerCase().includes(normalized) || item.url.toLowerCase().includes(normalized))
+        .slice(0, 8);
+    
+    if (matches.length === 0) {
+        hideSearchSuggestions();
+        return;
+    }
+    
+    searchSuggestionsContainer.innerHTML = matches.map(item => `
+        <button class="search-suggestion" data-url="${item.url}">
+            <span class="suggestion-icon"><i class="${item.icon}"></i></span>
+            <span class="suggestion-body">
+                <span class="suggestion-title">${item.name}</span>
+                <span class="suggestion-meta">${item.category}</span>
+                <span class="suggestion-url">${item.url}</span>
+            </span>
+        </button>
+    `).join('');
+    
+    searchSuggestionsContainer.classList.add('active');
+}
+
+function initSearchSuggestions() {
+    const searchBox = document.querySelector('.search-box');
+    if (!searchBox || !searchInput) return;
+    
+    searchSuggestionsContainer = document.createElement('div');
+    searchSuggestionsContainer.className = 'search-suggestions';
+    searchBox.appendChild(searchSuggestionsContainer);
+    
+    searchInput.addEventListener('input', () => renderSearchSuggestions(searchInput.value));
+    searchInput.addEventListener('focus', () => renderSearchSuggestions(searchInput.value));
+    
+    searchSuggestionsContainer.addEventListener('mousedown', (e) => {
+        const target = e.target.closest('.search-suggestion');
+        if (target) {
+            e.preventDefault();
+            openLinkWithBehavior(target.dataset.url);
+            hideSearchSuggestions();
+        }
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (!searchBox.contains(e.target)) {
+            hideSearchSuggestions();
+        }
+    });
+}
+
 function renderSearchEngines() {
     const container = document.querySelector('.search-engines');
     if (!container) return;
@@ -394,6 +557,49 @@ function renderSearchEngines() {
     
     // Update keyboard hints
     updateKeyboardHints();
+}
+
+function renderFavoritesRow() {
+    const container = document.getElementById('favorites-row');
+    if (!container) return;
+    
+    const pinned = getPinnedLinks();
+    if (pinned.length === 0) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    container.innerHTML = pinned.map(item => `
+        <button class="favorite-pill" data-url="${item.url}" title="${item.categoryName} • ${item.name}" draggable="true" data-id="${item.categoryId}|${item.index}">
+            <span class="pill-icon"><i class="${item.icon}"></i></span>
+            <span class="pill-text">${item.name}</span>
+        </button>
+    `).join('');
+    
+    container.querySelectorAll('.favorite-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+            openLinkWithBehavior(btn.dataset.url);
+        });
+        
+        btn.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', btn.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        
+        btn.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        
+        btn.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const sourceId = e.dataTransfer.getData('text/plain');
+            const targetId = btn.dataset.id;
+            handleFavoriteReorder(sourceId, targetId);
+        });
+    });
 }
 
 function updateKeyboardHints() {
@@ -678,16 +884,23 @@ function renderLinksGrid() {
     linksGrid.innerHTML = categories.map((category, index) => {
         const categoryLinks = links[category.id] || [];
         const colorClass = colorMode === 'multi' ? categoryColors[index % categoryColors.length] : 'mauve';
+        const isCollapsed = settings.collapsedCategories && settings.collapsedCategories[category.id] === 'true';
         
         return `
-            <section class="link-group" data-category="${category.id}" data-color="${colorClass}">
+            <section class="link-group ${isCollapsed ? 'collapsed' : ''}" data-category="${category.id}" data-color="${colorClass}">
                 <h2 class="group-title">
                     <span class="title-icon"><i class="${category.icon}"></i></span>
-                    ${category.name}
+                    <span class="group-name">${category.name}</span>
+                    <button class="collapse-btn" type="button" data-category="${category.id}" aria-label="Toggle ${category.name}">
+                        <i class="fa-solid ${isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'}"></i>
+                    </button>
                 </h2>
                 <div class="links">
-                    ${categoryLinks.map(link => `
-                        <a href="${link.url}" class="link-card" target="${linkTarget}" data-link-behavior="${settings.linkBehavior}">
+                    ${categoryLinks.map((link, linkIndex) => `
+                        <a href="${link.url}" class="link-card ${link.pinned ? 'pinned' : ''}" target="${linkTarget}" data-link-behavior="${settings.linkBehavior}">
+                            <button class="pin-btn ${link.pinned ? 'pinned' : ''}" type="button" data-category="${category.id}" data-index="${linkIndex}" aria-label="Pin ${link.name}">
+                                <i class="fa-solid ${link.pinned ? 'fa-star' : 'fa-star-half-stroke'}"></i>
+                            </button>
                             <span class="link-icon"><i class="${link.icon || 'fa-solid fa-link'}"></i></span>
                             <span class="link-text">${link.name}</span>
                         </a>
@@ -709,7 +922,94 @@ function renderLinksGrid() {
         });
     });
     
+    // Pin button handlers
+    document.querySelectorAll('.pin-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const catId = btn.dataset.category;
+            const idx = parseInt(btn.dataset.index);
+            togglePin(catId, idx);
+        });
+    });
+    
+    // Collapse/expand handlers
+    document.querySelectorAll('.collapse-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const catId = btn.dataset.category;
+            toggleCategoryCollapse(catId);
+        });
+    });
+    
     updateGridLayout();
+    renderFavoritesRow();
+}
+
+function toggleCategoryCollapse(categoryId) {
+    const nextState = settings.collapsedCategories?.[categoryId] === 'true' ? 'false' : 'true';
+    const updated = { ...(settings.collapsedCategories || {}) };
+    updated[categoryId] = nextState;
+    saveSettings('collapsedCategories', updated);
+    // Update current DOM without full re-render to avoid layout flash
+    const section = document.querySelector(`.link-group[data-category="${categoryId}"]`);
+    if (section) {
+        section.classList.toggle('collapsed', nextState === 'true');
+        const icon = section.querySelector('.collapse-btn i');
+        if (icon) {
+            icon.className = `fa-solid ${nextState === 'true' ? 'fa-chevron-down' : 'fa-chevron-up'}`;
+        }
+    }
+}
+
+function togglePin(categoryId, index) {
+    const catLinks = links[categoryId];
+    if (!catLinks || typeof catLinks[index] === 'undefined') return;
+    
+    catLinks[index].pinned = !catLinks[index].pinned;
+    if (catLinks[index].pinned) {
+        const maxPriority = Math.max(0, ...getPinnedLinks().map(p => p.priority));
+        catLinks[index].pinnedPriority = maxPriority + 1;
+    } else {
+        catLinks[index].pinnedPriority = 0;
+    }
+    saveLinks(links);
+    
+    // Update card UI in place
+    const card = document.querySelector(`.pin-btn[data-category="${categoryId}"][data-index="${index}"]`)?.closest('.link-card');
+    const btn = document.querySelector(`.pin-btn[data-category="${categoryId}"][data-index="${index}"]`);
+    if (btn) {
+        btn.classList.toggle('pinned', catLinks[index].pinned);
+        btn.innerHTML = `<i class="fa-solid ${catLinks[index].pinned ? 'fa-star' : 'fa-star-half-stroke'}"></i>`;
+    }
+    if (card) {
+        card.classList.toggle('pinned', catLinks[index].pinned);
+    }
+    
+    renderFavoritesRow();
+}
+
+function handleFavoriteReorder(sourceId, targetId) {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    const current = getPinnedLinks();
+    const order = current.map(item => `${item.categoryId}|${item.index}`);
+    const from = order.indexOf(sourceId);
+    const to = order.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    
+    const moved = order.splice(from, 1)[0];
+    order.splice(to, 0, moved);
+    
+    // Apply new priorities
+    order.forEach((id, idx) => {
+        const [cat, idxStr] = id.split('|');
+        const linkIdx = parseInt(idxStr);
+        if (links[cat] && links[cat][linkIdx]) {
+            links[cat][linkIdx].pinnedPriority = idx + 1;
+        }
+    });
+    
+    saveLinks(links);
+    renderFavoritesRow();
 }
 
 function updateGridLayout() {
@@ -818,6 +1118,8 @@ function initSettings() {
                 renderLinksGrid();
             } else if (setting === 'showKeyboardHints') {
                 updateKeyboardHints();
+            } else if (setting === 'density') {
+                applyDensity(value);
             } else if (setting === 'footerLeft' || setting === 'footerCenter' || setting === 'footerRight') {
                 updateFooter();
             }
@@ -1025,8 +1327,13 @@ function addCategory() {
     });
     links[newId] = [];
     
+    // Default new categories to collapsed
+    if (!settings.collapsedCategories) settings.collapsedCategories = {};
+    settings.collapsedCategories[newId] = 'true';
+    
     saveCategories(categories);
     saveLinks(links);
+    saveSettings('collapsedCategories', settings.collapsedCategories);
     renderCategoriesSettings();
     renderLinksGrid();
     updateLinkCategorySelect();
@@ -1035,6 +1342,10 @@ function addCategory() {
 function deleteCategory(categoryId) {
     categories = categories. filter(c => c.id !== categoryId);
     delete links[categoryId];
+    if (settings.collapsedCategories && categoryId in settings.collapsedCategories) {
+        delete settings.collapsedCategories[categoryId];
+        saveSettings('collapsedCategories', settings.collapsedCategories);
+    }
     
     saveCategories(categories);
     saveLinks(links);
@@ -1143,7 +1454,8 @@ function addLink() {
     links[categoryId].push({
         name: 'New Link',
         url: 'https://',
-        icon: 'fa-solid fa-link'
+        icon: 'fa-solid fa-link',
+        pinned: false
     });
     
     saveLinks(links);
@@ -1274,6 +1586,7 @@ function handleKeyboard(event) {
     if (event.key === 'Escape' && searchInput) {
         searchInput.value = '';
         searchInput.blur();
+        hideSearchSuggestions();
     }
     
     // Dynamic engine switching based on enabled engines
@@ -1299,6 +1612,7 @@ function initEventListeners() {
                 } else {
                     searchInput.value = '';
                 }
+                hideSearchSuggestions();
             }
         });
     }
@@ -1381,8 +1695,10 @@ function init() {
     }
     
     // Render dynamic content
+    ensureCollapsedState();
     renderLinksGrid();
     renderSearchEngines();
+    initSearchSuggestions();
     
     // Update time immediately and every second
     updateDateTime();
