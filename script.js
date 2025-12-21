@@ -13,44 +13,61 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 // ========================================
 
 const defaultCategories = [
-    { id: 'dev', name: 'Development', icon: 'fa-solid fa-code' },
-    { id: 'social', name: 'Social', icon: 'fa-solid fa-users' },
-    { id: 'media', name: 'Media', icon: 'fa-solid fa-play' },
-    { id: 'productivity', name: 'Productivity', icon: 'fa-solid fa-briefcase' }
+  { id: "devcloud", name: "Dev & Cloud", icon: "fa-solid fa-cloud" },
+  { id: "sebnWork", name: "SEBN Work", icon: "fa-solid fa-building" },
+  { id: "productivity", name: "Productivity", icon: "fa-solid fa-briefcase" },
+  { id: "media", name: "Media", icon: "fa-solid fa-play" },
+  { id: "social", name: "Social", icon: "fa-solid fa-users" },
+  { id: "homeServer", name: "Home Server", icon: "fa-solid fa-server" },
 ];
 
 const defaultLinks = {
-    'dev': [
-        { name: 'GitHub', url: 'https://github.com', icon: 'fa-brands fa-github' },
-        { name: 'GitLab', url: 'https://gitlab.com', icon: 'fa-brands fa-gitlab' },
-        { name: 'Stack Overflow', url: 'https://stackoverflow.com', icon: 'fa-brands fa-stack-overflow' },
-        { name: 'CodePen', url: 'https://codepen.io', icon: 'fa-brands fa-codepen' },
-        { name: 'Vercel', url: 'https://vercel.com', icon: 'fa-solid fa-v' },
+    'devcloud': [
+        { name: 'GitHub', url: 'https://github.com/HamzaOPLEX', icon: 'fa-brands fa-github' },
+        { name: 'Azure Portal', url: 'https://portal.azure.com/#home', icon: 'fa-brands fa-microsoft' },
+        { name: 'Hostinger', url: 'https://hostinger.com', icon: 'fa-solid fa-globe' },
+        { name: 'Self-Hosted N8N', url: 'https://oplexhome.zapto.org/home/workflows', icon: 'fa-solid fa-diagram-project' },
+        { name: 'Orangehost', url: 'https://www.orangehost.com/', icon: 'fa-solid fa-network-wired' },
         { name: 'Docker', url: 'https://docker.com', icon: 'fa-brands fa-docker' }
     ],
-    'social': [
-        { name: 'Reddit', url: 'https://reddit.com', icon: 'fa-brands fa-reddit-alien' },
-        { name: 'Twitter', url: 'https://twitter.com', icon: 'fa-brands fa-x-twitter' },
-        { name: 'Discord', url: 'https://discord.com', icon: 'fa-brands fa-discord' },
-        { name: 'LinkedIn', url: 'https://linkedin.com', icon: 'fa-brands fa-linkedin' },
-        { name: 'Mastodon', url: 'https://mastodon.social', icon: 'fa-brands fa-mastodon' },
-        { name: 'Twitch', url: 'https://twitch.tv', icon: 'fa-brands fa-twitch' }
+    'productivity': [
+        { name: 'Todo List', url: 'https://to-do.office.com/tasks/', icon: 'fa-solid fa-list-check' },
+        { name: 'Traduction', url: 'https://translate.google.com/', icon: 'fa-solid fa-language' },
+        { name: 'ChatGPT', url: 'https://chatgpt.com/', icon: 'fa-solid fa-robot' },
+        { name: 'Notion', url: 'https://www.notion.so', icon: 'fa-solid fa-note-sticky' },
+        { name: 'Google Calendar', url: 'https://calendar.google.com/', icon: 'fa-solid fa-calendar-days' }
+    ],
+    'sebnWork': [
+        { name: 'VMware Vcenter', url: 'https://tanvcsa001.sebn.com/ui/', icon: 'fa-solid fa-server' },
+        { name: 'SD Monitor', url: 'https://sdmonitor.sebn.com/configure', icon: 'fa-solid fa-chart-line' },
+        { name: 'Optitime', url: 'http://tanapp0006/OptitimeNET/Intranet/Espace_Collab/SyntheseCLBM1.aspx?PNumFct=0', icon: 'fa-solid fa-clock' },
+        { name: 'Bitlocker', url: 'https://hatecmbl01.sebn.com/helpdesk/KeyRecoveryPage.aspx', icon: 'fa-solid fa-lock' },
+        { name: 'PaperCUT', url: 'https://tanapp0008:9192/app', icon: 'fa-solid fa-print' },
+        { name: 'fsportal', url: 'https://fsportal.sebn.com/', icon: 'fa-solid fa-folder-open' },
+        { name: 'AssetMgr', url: 'http://10.150.2.201/TANITAssetM/logout.php', icon: 'fa-solid fa-box' },
+        { name: 'MAO', url: 'http://hatinte001.sebn.com/MAO-API/#/start', icon: 'fa-solid fa-diagram-project' },
+        { name: 'Generation', url: 'http://hatinte001.sebn.com/SEBNPL.QueueEditor//#/history', icon: 'fa-solid fa-list' },
+        { name: 'SPM', url: 'http://tanapp0005.sebn.com/SPM/#/Login?returnUrl=%2Fstart', icon: 'fa-solid fa-right-to-bracket' }
     ],
     'media': [
-        { name: 'YouTube', url: 'https://youtube.com', icon: 'fa-brands fa-youtube' },
-        { name: 'Spotify', url: 'https://spotify.com', icon: 'fa-brands fa-spotify' },
-        { name: 'Netflix', url: 'https://netflix.com', icon: 'fa-solid fa-film' },
-        { name: 'SoundCloud', url: 'https://soundcloud.com', icon: 'fa-brands fa-soundcloud' },
-        { name: 'Prime Video', url: 'https://primevideo.com', icon: 'fa-brands fa-amazon' },
-        { name: 'Plex', url: 'https://plex.tv', icon: 'fa-solid fa-circle-play' }
+        { name: 'Spotify', url: 'https://open.spotify.com', icon: 'fa-brands fa-spotify' },
+        { name: 'YouTube', url: 'https://youtube.com', icon: 'fa-brands fa-youtube' }
     ],
-    'productivity': [
-        { name: 'Notion', url: 'https://notion.so', icon: 'fa-solid fa-book' },
-        { name: 'Gmail', url: 'https://mail.google.com', icon: 'fa-solid fa-envelope' },
-        { name: 'Calendar', url: 'https://calendar.google.com', icon: 'fa-solid fa-calendar-days' },
-        { name: 'Drive', url: 'https://drive.google.com', icon: 'fa-brands fa-google-drive' },
-        { name: 'Trello', url: 'https://trello.com', icon: 'fa-brands fa-trello' },
-        { name: 'Figma', url: 'https://figma.com', icon: 'fa-brands fa-figma' }
+    'social': [
+        { name: 'LinkedIn', url: 'https://linkedin.com', icon: 'fa-brands fa-linkedin' },
+        { name: 'WhatsApp', url: 'https://web.whatsapp.com', icon: 'fa-brands fa-whatsapp' },
+        { name: 'Gmail', url: 'https://mail.google.com/', icon: 'fa-solid fa-envelope' },
+        { name: 'Reddit', url: 'https://reddit.com', icon: 'fa-brands fa-reddit-alien' },
+        { name: 'Teams', url: 'https://teams.microsoft.com', icon: 'fa-brands fa-microsoft' },
+        { name: 'Outlook', url: 'https://outlook.office.com/mail/', icon: 'fa-solid fa-envelope-circle-check' }
+    ],
+    'homeServer': [
+        { name: 'VMware', url: 'http://192.168.1.5', icon: 'fa-solid fa-server' },
+        { name: 'EveNG', url: 'http://192.168.1.30', icon: 'fa-solid fa-network-wired' },
+        { name: 'Bitwarden', url: 'http://192.168.1.9:9090', icon: 'fa-solid fa-key' },
+        { name: 'Portainer', url: 'https://192.168.1.9:9443/#!/2/docker/containers', icon: 'fa-solid fa-box-open' },
+        { name: 'DNS Server', url: 'http://192.168.1.9:8888/', icon: 'fa-solid fa-globe' },
+        { name: 'NextCloud', url: 'http://192.168.1.7', icon: 'fa-solid fa-cloud' }
     ]
 };
 
