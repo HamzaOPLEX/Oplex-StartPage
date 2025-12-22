@@ -1040,6 +1040,15 @@ body {
     transform: rotate(45deg);
 }
 
+.toggle-collapse-all {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.toggle-collapse-all.pressed {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 4px rgba(203,166,247,0.2);
+}
+
 /* Header */
 .header {
     display: flex;
@@ -1904,8 +1913,21 @@ body {
     letter-spacing: 1px;
 }
 
+.link-group .links {
+    max-height: 1200px;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+[data-density="compact"] .link-group .links {
+    max-height: 900px;
+}
+
 .link-group.collapsed .links {
-    display: none;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
 }
 
 /* Category-specific colors */

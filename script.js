@@ -33,7 +33,7 @@ const defaultLinks = {
     'productivity': [
         { name: 'MS Todo List', url: 'https://to-do.office.com/tasks/', icon: 'fa-solid fa-list-check' },
         { name: 'Traduction', url: 'https://translate.google.com/', icon: 'fa-solid fa-language' },
-        { name: 'ChatGPT', url: 'https://chatgpt.com/', icon: 'fa-solid fa-robot' },
+        { name: 'ChatGPT', url: 'https://chatgpt.com/', icon: 'fa-brands fa-openai' },
         { name: 'Notion', url: 'https://www.notion.so', icon: 'fa-solid fa-note-sticky' },
         { name: 'Google Calendar', url: 'https://calendar.google.com/', icon: 'fa-solid fa-calendar-days' }
     ],
@@ -137,13 +137,13 @@ function loadSettings() {
         colorMode: 'multi',
         timeFormat: '12',
         showSeconds: 'false',
-        tempUnit: 'F',
+        tempUnit: 'C',
         showQuotes: 'true',
         enabledEngines: ['google', 'duckduckgo', 'github', 'youtube'],
         preferredEngine: 'google',
-        weatherLocation: 'New York,NY,US',
+        weatherLocation: 'Tangier,MA',
         openWeatherApiKey: '',
-        linkBehavior: 'same',
+        linkBehavior: 'new-tab',
         showKeyboardHints: 'true',
         footerLeft: 'weather',
         footerCenter: 'blank',
@@ -943,6 +943,7 @@ function renderLinksGrid() {
     
     updateGridLayout();
     renderFavoritesRow();
+    updateCollapseToggleVisual();
 }
 
 function toggleCategoryCollapse(categoryId) {
@@ -959,6 +960,27 @@ function toggleCategoryCollapse(categoryId) {
             icon.className = `fa-solid ${nextState === 'true' ? 'fa-chevron-down' : 'fa-chevron-up'}`;
         }
     }
+}
+
+function setAllCategoriesCollapsed(collapse) {
+    const updated = {};
+    categories.forEach(cat => {
+        updated[cat.id] = collapse ? 'true' : 'false';
+    });
+    saveSettings('collapsedCategories', updated);
+    settings.collapsedCategories = updated;
+    
+    document.querySelectorAll('.link-group').forEach(section => {
+        const catId = section.dataset.category;
+        const isCollapsed = updated[catId] === 'true';
+        section.classList.toggle('collapsed', isCollapsed);
+        const icon = section.querySelector('.collapse-btn i');
+        if (icon) {
+            icon.className = `fa-solid ${isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'}`;
+        }
+    });
+    
+    updateCollapseToggleVisual();
 }
 
 function togglePin(categoryId, index) {
@@ -1010,6 +1032,19 @@ function handleFavoriteReorder(sourceId, targetId) {
     
     saveLinks(links);
     renderFavoritesRow();
+}
+
+function areAllCategoriesCollapsed() {
+    return categories.every(cat => settings.collapsedCategories?.[cat.id] === 'true');
+}
+
+function updateCollapseToggleVisual() {
+    const collapseAllToggle = document.getElementById('collapse-all-toggle');
+    const collapseAllIcon = document.getElementById('collapse-all-icon');
+    if (!collapseAllToggle || !collapseAllIcon) return;
+    const allCollapsed = areAllCategoriesCollapsed();
+    collapseAllToggle.classList.toggle('is-collapsed', allCollapsed);
+    collapseAllIcon.className = `fa-solid ${allCollapsed ? 'fa-expand' : 'fa-compress'}`;
 }
 
 function updateGridLayout() {
@@ -1623,6 +1658,8 @@ function initEventListeners() {
     const backupBtn = document.getElementById('backup-button');
     const restoreBtn = document.getElementById('restore-button');
     const restoreFileInput = document.getElementById('restore-file-input');
+    const collapseAllToggle = document.getElementById('collapse-all-toggle');
+    const collapseAllIcon = document.getElementById('collapse-all-icon');
     
     if (backupBtn) {
         backupBtn.addEventListener('click', exportSettings);
@@ -1640,6 +1677,16 @@ function initEventListeners() {
                 // Reset input so same file can be selected again
                 e.target.value = '';
             }
+        });
+    }
+
+    if (collapseAllToggle && collapseAllIcon) {
+        collapseAllToggle.addEventListener('click', () => {
+            const shouldCollapse = !areAllCategoriesCollapsed();
+            setAllCategoriesCollapsed(shouldCollapse);
+            updateCollapseToggleVisual();
+            collapseAllToggle.classList.add('pressed');
+            setTimeout(() => collapseAllToggle.classList.remove('pressed'), 180);
         });
     }
 }
@@ -1699,6 +1746,7 @@ function init() {
     renderLinksGrid();
     renderSearchEngines();
     initSearchSuggestions();
+    updateCollapseToggleVisual();
     
     // Update time immediately and every second
     updateDateTime();
