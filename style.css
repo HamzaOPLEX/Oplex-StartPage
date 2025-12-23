@@ -1689,6 +1689,11 @@ body {
     color: var(--primary);
 }
 
+.search-suggestion.active {
+    background: var(--surface1);
+    color: var(--primary);
+}
+
 .suggestion-icon {
     width: 32px;
     height: 32px;

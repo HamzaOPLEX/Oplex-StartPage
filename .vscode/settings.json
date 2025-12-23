@@ -1,3 +1,6 @@
 {
     "chatgpt.openOnStartup": true
+    "codex.autoApproveEdits": true,
+    "codex.autoApproveFileCreation": true,
+    "codex.confirmBeforeRun": "dangerousOnly",
 }
