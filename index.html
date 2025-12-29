@@ -419,6 +419,9 @@
                 <button class="toolbar-btn toggle-collapse-all" id="collapse-all-toggle" title="Toggle collapse all">
                     <i class="fa-solid fa-compress" id="collapse-all-icon"></i>
                 </button>
+                <button class="toolbar-btn" id="help-btn" title="Keyboard shortcuts">
+                    <i class="fa-solid fa-question"></i>
+                </button>
                 <button class="toolbar-btn" id="settings-btn" title="Settings">
                     <i class="fa-solid fa-gear"></i>
                 </button>
@@ -459,6 +462,37 @@
             <div class="credits-content">
                 <span class="credits-text">Developed by Vegvisir Design with help and support from the <a href="https://github.com" target="_blank" class="credits-link">GitHub Community</a></span>
             </div>
+        </div>
+
+        <!-- Today Todo Side Widget -->
+        <aside class="today-todo-widget" id="today-todo-widget" aria-labelledby="today-todo-title">
+            <button class="today-todo-collapse" id="today-todo-collapse" aria-label="Collapse today todo">
+                <i class="fa-solid fa-list-check todo-collapse-icon" aria-hidden="true"></i>
+                <i class="fa-solid fa-chevron-right todo-collapse-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="today-todo">
+                <div class="today-todo-header">
+                    <div class="today-todo-title" id="today-todo-title">Today</div>
+                </div>
+                <div class="today-todo-input">
+                    <input type="text" id="today-todo-input" placeholder="Add a todo and press Enter" maxlength="80" autocomplete="off">
+                </div>
+                <ul class="today-todo-list" id="today-todo-list"></ul>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Help / Commands Overlay -->
+    <div class="help-overlay" id="help-overlay" aria-hidden="true">
+        <div class="help-backdrop" id="help-backdrop"></div>
+        <div class="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+            <div class="help-header">
+                <h3 id="help-title">Keyboard Shortcuts</h3>
+                <button class="help-close-btn" id="help-close-btn" aria-label="Close help">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <ul class="help-list" id="help-list"></ul>
         </div>
     </div>
 

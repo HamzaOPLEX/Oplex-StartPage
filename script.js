@@ -12,6 +12,15 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 // Default Data
 // ========================================
 
+const TODAY_TODO_KEY = 'todayTodo';
+const keyboardCommands = [
+    { key: 'T', action: 'Toggle Today Todo' },
+    { key: 'S', action: 'Focus Search' },
+    { key: '1-N', action: 'Switch Search Engine' },
+    { key: 'Esc', action: 'Clear / Close' },
+    { key: '?', action: 'Help' }
+];
+
 const defaultCategories = [
   { id: "devcloud", name: "Dev & Cloud", icon: "fa-solid fa-cloud" },
   { id: "sebnWork", name: "SEBN Work", icon: "fa-solid fa-building" },
@@ -150,8 +159,7 @@ function loadSettings() {
         footerRight: 'quotes',
         socialLinks: [],
         density: 'cozy',
-        collapsedCategories: {},
-        lastQueries: {}
+        collapsedCategories: {}
     };
     
     return {
@@ -174,8 +182,7 @@ function loadSettings() {
         footerRight: localStorage.getItem('footerRight') ?? defaults.footerRight,
         socialLinks: JSON.parse(localStorage.getItem('socialLinks')) ?? defaults.socialLinks,
         density: localStorage.getItem('density') ?? defaults.density,
-        collapsedCategories: JSON.parse(localStorage.getItem('collapsedCategories')) ?? defaults.collapsedCategories,
-        lastQueries: JSON.parse(localStorage.getItem('lastQueries')) ?? defaults.lastQueries
+        collapsedCategories: JSON.parse(localStorage.getItem('collapsedCategories')) ?? defaults.collapsedCategories
     };
 }
 
@@ -312,8 +319,12 @@ applyDensity(settings.density);
 // ========================================
 
 let searchInput, timeElement, dateElement, greetingElement, weatherElement, quoteElement, linksGrid, searchSuggestionsContainer;
+let todayTodoInput, todayTodoList, todayTodo, todayTodoWidget, todayTodoCollapseBtn;
+let helpOverlay, helpModal, helpList, helpCloseBtn, helpBackdrop;
+let previousFocusedElement = null;
 let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
+let todayTodoVisible = true;
 
 // ========================================
 // Time & Date Functions
@@ -382,6 +393,158 @@ function updateGreeting(hour) {
 }
 
 // ========================================
+// Today Todo (Daily checklist)
+// ========================================
+
+function getTodayDateString() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function loadTodayTodo() {
+    const today = getTodayDateString();
+    const stored = localStorage.getItem(TODAY_TODO_KEY);
+    
+    if (!stored) {
+        const fresh = { date: today, items: [] };
+        localStorage.setItem(TODAY_TODO_KEY, JSON.stringify(fresh));
+        return fresh;
+    }
+    
+    try {
+        const parsed = JSON.parse(stored);
+        if (!parsed || parsed.date !== today || !Array.isArray(parsed.items)) {
+            const fresh = { date: today, items: [] };
+            localStorage.setItem(TODAY_TODO_KEY, JSON.stringify(fresh));
+            return fresh;
+        }
+        return { date: today, items: parsed.items.slice(0, 5).map(item => ({
+            text: (item && typeof item.text === 'string') ? item.text : '',
+            done: !!(item && item.done)
+        })) };
+    } catch {
+        const fresh = { date: today, items: [] };
+        localStorage.setItem(TODAY_TODO_KEY, JSON.stringify(fresh));
+        return fresh;
+    }
+}
+
+function saveTodayTodo(data) {
+    localStorage.setItem(TODAY_TODO_KEY, JSON.stringify(data));
+    todayTodo = data;
+}
+
+function renderTodayTodo() {
+    if (!todayTodoList || !todayTodo || !Array.isArray(todayTodo.items)) return;
+    todayTodoList.innerHTML = '';
+    
+    todayTodo.items.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.className = 'today-todo-item';
+        if (item.done) li.classList.add('done');
+        
+        const label = document.createElement('label');
+        label.className = 'today-todo-label';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.dataset.index = index;
+        checkbox.checked = !!item.done;
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'today-todo-text';
+        textSpan.textContent = item.text;
+        
+        label.appendChild(checkbox);
+        label.appendChild(textSpan);
+        li.appendChild(label);
+        todayTodoList.appendChild(li);
+    });
+}
+
+function addTodayTodoItem(text) {
+    if (!todayTodo || todayTodo.items.length >= 5) return;
+    const clean = text.trim();
+    if (!clean) return;
+    
+    todayTodo.items.push({ text: clean, done: false });
+    saveTodayTodo(todayTodo);
+    renderTodayTodo();
+}
+
+function toggleTodayTodo(index, checked) {
+    if (!todayTodo || !todayTodo.items[index]) return;
+    todayTodo.items[index].done = checked;
+    saveTodayTodo(todayTodo);
+    renderTodayTodo();
+}
+
+function shouldAutoHideTodo() {
+    return window.innerWidth <= 900;
+}
+
+function applyTodayTodoVisibility(visible, { focusOnShow = false } = {}) {
+    todayTodoVisible = visible;
+    if (todayTodoWidget) {
+        todayTodoWidget.classList.toggle('is-hidden', !visible);
+    }
+    if (todayTodoCollapseBtn) {
+        todayTodoCollapseBtn.setAttribute('aria-label', visible ? 'Collapse today todo' : 'Expand today todo');
+        todayTodoCollapseBtn.classList.toggle('collapsed', !visible);
+    }
+    if (visible && focusOnShow && todayTodoInput) {
+        todayTodoInput.focus();
+    }
+}
+
+function toggleTodayTodoVisibility(focusOnShow = false) {
+    applyTodayTodoVisibility(!todayTodoVisible, { focusOnShow });
+}
+
+function initTodayTodoWidget() {
+    if (!todayTodoWidget) return;
+    applyTodayTodoVisibility(!shouldAutoHideTodo(), { focusOnShow: false });
+    
+    if (todayTodoCollapseBtn) {
+        todayTodoCollapseBtn.addEventListener('click', () => toggleTodayTodoVisibility(!todayTodoVisible));
+    }
+    
+    let wasSmall = shouldAutoHideTodo();
+    window.addEventListener('resize', () => {
+        const isSmall = shouldAutoHideTodo();
+        if (isSmall && !wasSmall) {
+            applyTodayTodoVisibility(false);
+        }
+        wasSmall = isSmall;
+    });
+}
+
+function initTodayTodo() {
+    todayTodo = loadTodayTodo();
+    renderTodayTodo();
+    
+    if (todayTodoInput) {
+        todayTodoInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                addTodayTodoItem(todayTodoInput.value);
+                todayTodoInput.value = '';
+            }
+        });
+    }
+    
+    if (todayTodoList) {
+        todayTodoList.addEventListener('change', (e) => {
+            const target = e.target;
+            if (target && target.matches('input[type="checkbox"]')) {
+                const idx = parseInt(target.dataset.index, 10);
+                if (!Number.isNaN(idx)) {
+                    toggleTodayTodo(idx, target.checked);
+                }
+            }
+        });
+    }
+}
+
+// ========================================
 // Search Functions
 // ========================================
 
@@ -426,9 +589,7 @@ function setSearchEngine(engine) {
     
     if (searchInput) {
         searchInput.placeholder = `Search ${allSearchEngines[engine].name}... `;
-        const remembered = settings.lastQueries?.[engine] ?? '';
-        searchInput.value = remembered;
-        renderSearchSuggestions(remembered);
+        renderSearchSuggestions(searchInput.value);
     }
 }
 
@@ -537,13 +698,6 @@ function initSearchSuggestions() {
     
     searchInput.addEventListener('input', () => renderSearchSuggestions(searchInput.value));
     searchInput.addEventListener('focus', () => renderSearchSuggestions(searchInput.value));
-    searchInput.addEventListener('input', () => {
-        if (currentEngine) {
-            const updated = { ...(settings.lastQueries || {}) };
-            updated[currentEngine] = searchInput.value;
-            saveSettings('lastQueries', updated);
-        }
-    });
     
     searchSuggestionsContainer.addEventListener('mousedown', (e) => {
         const target = e.target.closest('.search-suggestion');
@@ -1642,20 +1796,46 @@ function renderFooterSettings() {
 function handleKeyboard(event) {
     const settingsOverlay = document.getElementById('settings-overlay');
     const isSettingsOpen = settingsOverlay && settingsOverlay. classList.contains('active');
+    const isHelpOpen = helpOverlay && helpOverlay.classList.contains('active');
+    const activeTag = document.activeElement?.tagName;
     
     if (event.key === '/' && document.activeElement !== searchInput && !isSettingsOpen) {
         event.preventDefault();
         if (searchInput) searchInput.focus();
     }
     
-    if (event.key === 'Escape' && searchInput) {
-        searchInput.value = '';
-        searchInput.blur();
-        hideSearchSuggestions();
+    if (event.key && event.key.toLowerCase() === 's' && !isSettingsOpen && !isHelpOpen && activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+        event.preventDefault();
+        if (searchInput) searchInput.focus();
+    }
+    
+    if (event.key && event.key.toLowerCase() === 't' && !isSettingsOpen && !isHelpOpen && activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+        event.preventDefault();
+        toggleTodayTodoVisibility(true);
+    }
+    
+    if ((event.key === '?' || event.key.toLowerCase() === 'h') && !isHelpOpen) {
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+        event.preventDefault();
+        openHelpOverlay();
+        return;
+    }
+    
+    if (event.key === 'Escape') {
+        if (isHelpOpen) {
+            event.preventDefault();
+            closeHelpOverlay();
+            return;
+        }
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.blur();
+            hideSearchSuggestions();
+        }
     }
     
     // Dynamic engine switching based on enabled engines
-    if (document.activeElement !== searchInput && !isSettingsOpen) {
+    if (document.activeElement !== searchInput && !isSettingsOpen && !isHelpOpen) {
         const num = parseInt(event.key);
         if (num >= 1 && num <= settings.enabledEngines.length) {
             setSearchEngine(settings.enabledEngines[num - 1]);
@@ -1740,6 +1920,90 @@ function initEventListeners() {
 }
 
 // ========================================
+// Help Overlay
+// ========================================
+
+function renderHelpCommands() {
+    if (!helpList) return;
+    helpList.innerHTML = keyboardCommands.map(cmd => `
+        <li class="help-item">
+            <kbd class="help-key">${cmd.key}</kbd>
+            <span class="help-action">${cmd.action}</span>
+        </li>
+    `).join('');
+}
+
+function trapFocus(event) {
+    if (!helpOverlay || !helpOverlay.classList.contains('active')) return;
+    if (event.key !== 'Tab') return;
+    
+    const focusable = helpOverlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const focusables = Array.from(focusable).filter(el => !el.hasAttribute('disabled'));
+    if (focusables.length === 0) return;
+    
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    
+    if (event.shiftKey) {
+        if (document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        }
+    } else {
+        if (document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+}
+
+function openHelpOverlay() {
+    if (!helpOverlay) return;
+    previousFocusedElement = document.activeElement;
+    helpOverlay.classList.add('active');
+    helpOverlay.setAttribute('aria-hidden', 'false');
+    const focusTarget = helpCloseBtn || helpOverlay.querySelector('button');
+    if (focusTarget) focusTarget.focus();
+    document.addEventListener('keydown', trapFocus, true);
+}
+
+function closeHelpOverlay() {
+    if (!helpOverlay) return;
+    helpOverlay.classList.remove('active');
+    helpOverlay.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', trapFocus, true);
+    if (previousFocusedElement && typeof previousFocusedElement.focus === 'function') {
+        previousFocusedElement.focus();
+    }
+}
+
+function initHelpOverlay() {
+    renderHelpCommands();
+    
+    const helpBtn = document.getElementById('help-btn');
+    if (helpBtn) {
+        helpBtn.addEventListener('click', () => openHelpOverlay());
+    }
+    
+    if (helpCloseBtn) {
+        helpCloseBtn.addEventListener('click', () => closeHelpOverlay());
+    }
+    
+    if (helpBackdrop) {
+        helpBackdrop.addEventListener('click', () => closeHelpOverlay());
+    }
+    
+    if (helpOverlay) {
+        helpOverlay.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeHelpOverlay();
+            }
+        });
+    }
+}
+
+// ========================================
 // Command palette
 // ========================================
 
@@ -1776,6 +2040,15 @@ function init() {
     weatherElement = document.getElementById('weather');
     quoteElement = document.getElementById('quote');
     linksGrid = document. getElementById('links-grid');
+    todayTodoInput = document.getElementById('today-todo-input');
+    todayTodoList = document.getElementById('today-todo-list');
+    todayTodoWidget = document.getElementById('today-todo-widget');
+    todayTodoCollapseBtn = document.getElementById('today-todo-collapse');
+    helpOverlay = document.getElementById('help-overlay');
+    helpModal = document.querySelector('.help-modal');
+    helpList = document.getElementById('help-list');
+    helpCloseBtn = document.getElementById('help-close-btn');
+    helpBackdrop = document.getElementById('help-backdrop');
     
     // Hide "New Window" option on Safari (it behaves the same as "New Tab")
     if (isSafari) {
@@ -1795,6 +2068,9 @@ function init() {
     renderSearchEngines();
     initSearchSuggestions();
     updateCollapseToggleVisual();
+    initTodayTodo();
+    initTodayTodoWidget();
+    initHelpOverlay();
     
     // Update time immediately and every second
     updateDateTime();
